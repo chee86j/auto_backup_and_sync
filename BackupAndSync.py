@@ -1,9 +1,11 @@
 import os
 import shutil
 import logging
+import schedule
+import time
 
-SOURCE_DIR = 'C:/Users/username/Documents' #Replace with your source directory
-BACKUP_DIR = 'D:/Backup/Documents' # Replace with your backup directory
+SOURCE_DIR = 'C:\Users\Admin\Documents\Scanned Documents' #Replace with your source directory
+BACKUP_DIR = 'D:\Users\Admin\Documents\Backup Scanned Documents' # Replace with your backup directory
 
 def get_all_files(directory):
     files_list = []
@@ -33,3 +35,15 @@ def backup_files():
             os.path.getmtime(file) > os.path.getmtime(backup_files_dict[rel_path])):
             shutil.copy2(file, backup_file_path)
             logging.info(f"Backed up: {file} -> {backup_file_path}")
+            
+# Scheduling
+def run_scheduler():
+    schedule.every().day.at("02:00").do(backup_files) # Backup Files Daily at 2:00 AM
+    
+    while True: # Condition to keep the script running
+        schedule.run_pending() # Check if any scheduled tasks are due
+        time.sleep(1) # Sleep for 1 second before checking again
+        
+if __name__ == '__main__':
+    logging.basicConfig(filename='backup.log', level=logging.INFO, format='%(asctime)s:%(levelname)s:%(message)s')
+    run_scheduler()
