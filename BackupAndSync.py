@@ -29,3 +29,7 @@ def backup_files():
             os.makedirs(os.path.dirname(backup_file_path))
             
         # If File not in Backup Directory or is Outdated, Copy it
+        if (rel_path not in backup_files_dict or
+            os.path.getmtime(file) > os.path.getmtime(backup_files_dict[rel_path])):
+            shutil.copy2(file, backup_file_path)
+            logging.info(f"Backed up: {file} -> {backup_file_path}")
