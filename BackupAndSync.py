@@ -1,3 +1,4 @@
+import sys
 import os
 import shutil
 import logging
@@ -6,19 +7,159 @@ import time
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QFileDialog, QMessageBox, QTimeEdit, QHBoxLayout
+from PySide6.QtCore import QTime
 
-# Configuration to be set by user
-SOURCE_DIR = 'C:/Users/username/Documents'  # Replace with your source directory
-BACKUP_DIR = 'D:/Backup/Documents'  # Replace with your backup directory
-EMAIL_SENDER = 'your_email@example.com' # Replace with your email
-EMAIL_RECEIVER = 'receiver_email@example.com' # Replace with the email of the receiver
-EMAIL_SUBJECT = 'Backup Report' # Subject of the email
-EMAIL_SMTP_SERVER = 'smtp.example.com' # Replace with your email SMTP server
-EMAIL_SMTP_PORT = 587 # Replace with your email SMTP port
-EMAIL_USERNAME = 'your_email@example.com' # Replace with your email username
-EMAIL_PASSWORD = 'your_password' # Replace with your email password
+# BackupApp Class to Create the GUI
+class BackupApp(QWidget):
+    def __init__(self):
+        super().__init__() # Call the parent class constructor
+        self.initUI() # Call the initUI method to build the GUI
 
-# Email Function
+    # Intialize the UI Elements & Layout
+    def initUI(self):
+        self.setWindowTitle('Backup and Sync Settings') # Set the Window Title
+        layout = QVBoxLayout() # Create a Vertical Box Layout
+
+        # Source Directory Elements
+        self.source_label = QLabel('Source Directory:')
+        self.source_input = QLineEdit()
+        self.source_button = QPushButton('Browse')
+        self.source_button.clicked.connect(self.browse_source)
+        
+        # Backup Directory Elements
+        self.backup_label = QLabel('Backup Directory:')
+        self.backup_input = QLineEdit()
+        self.backup_button = QPushButton('Browse')
+        self.backup_button.clicked.connect(self.browse_backup)
+
+        # Email Settings Elements - Labels & Inputs
+        self.email_label = QLabel('Sender Email:')
+        self.email_input = QLineEdit()
+
+        self.receiver_label = QLabel('Receiver Email:')
+        self.receiver_input = QLineEdit()
+
+        self.smtp_label = QLabel('SMTP Server:')
+        self.smtp_input = QLineEdit()
+
+        self.port_label = QLabel('SMTP Port:')
+        self.port_input = QLineEdit()
+
+        self.username_label = QLabel('Email Username:')
+        self.username_input = QLineEdit()
+
+        self.password_label = QLabel('Email Password:')
+        self.password_input = QLineEdit()
+
+        # Backup Time Elements
+        self.time_label = QLabel('Backup Time:')
+        self.time_input = QTimeEdit()
+        self.time_input.setTime(QTime(2, 0))
+
+        # Save & Run Backup Button
+        self.save_button = QPushButton('Save and Run Backup')
+        self.save_button.clicked.connect(self.save_settings)
+
+        # Add Widgets to the Layout
+        layout.addWidget(self.source_label)
+        layout.addWidget(self.source_input)
+        layout.addWidget(self.source_button)
+
+        layout.addWidget(self.backup_label)
+        layout.addWidget(self.backup_input)
+        layout.addWidget(self.backup_button)
+
+        layout.addWidget(self.email_label)
+        layout.addWidget(self.email_input)
+
+        layout.addWidget(self.receiver_label)
+        layout.addWidget(self.receiver_input)
+
+        layout.addWidget(self.smtp_label)
+        layout.addWidget(self.smtp_input)
+
+        layout.addWidget(self.port_label)
+        layout.addWidget(self.port_input)
+
+        layout.addWidget(self.username_label)
+        layout.addWidget(self.username_input)
+
+        layout.addWidget(self.password_label)
+        layout.addWidget(self.password_input)
+
+        layout.addWidget(self.time_label)
+        layout.addWidget(self.time_input)
+
+        layout.addWidget(self.save_button)
+
+        self.setLayout(layout) # Set Layout for the Main Window
+
+    # Browse Source Directory to Select Folder
+    def browse_source(self):
+        dir_path = QFileDialog.getExistingDirectory(self, 'Select Source Directory')
+        if dir_path:
+            self.source_input.setText(dir_path)
+
+    # Browse Backup Directory to Select Folder
+    def browse_backup(self):
+        dir_path = QFileDialog.getExistingDirectory(self, 'Select Backup Directory')
+        if dir_path:
+            self.backup_input.setText(dir_path)
+
+    # Save Settings to a File & Start the Backup Script
+    def save_settings(self):
+        # Collect all the settings from the input fields
+        settings = {
+            'SOURCE_DIR': self.source_input.text(),
+            'BACKUP_DIR': self.backup_input.text(),
+            'EMAIL_SENDER': self.email_input.text(),
+            'EMAIL_RECEIVER': self.receiver_input.text(),
+            'EMAIL_SMTP_SERVER': self.smtp_input.text(),
+            'EMAIL_SMTP_PORT': self.port_input.text(),
+            'EMAIL_USERNAME': self.username_input.text(),
+            'EMAIL_PASSWORD': self.password_input.text(),
+            'BACKUP_TIME': self.time_input.time().toString("HH:mm")
+        }
+
+        # Write the settings to a file 'settings.ini'
+        with open('settings.ini', 'w') as f:
+            for key, value in settings.items():
+                f.write(f"{key}={value}\n")
+
+        # Show a message box to confirm that the settings have been saved
+        QMessageBox.information(self, 'Settings Saved', 'Settings have been saved successfully!')
+
+        run_backup_script() # Start the Backup Script
+
+# Read the settings from the saved file & start the backup script
+def run_backup_script():
+    settings = {}
+    with open('settings.ini', 'r') as f:
+        for line in f:
+            key, value = line.strip().split('=')
+            settings[key] = value
+
+    # Load the settings into global variables into backup script
+    global SOURCE_DIR, BACKUP_DIR, EMAIL_SENDER, EMAIL_RECEIVER, EMAIL_SUBJECT, EMAIL_SMTP_SERVER, EMAIL_SMTP_PORT, EMAIL_USERNAME, EMAIL_PASSWORD, BACKUP_TIME
+    SOURCE_DIR = settings['SOURCE_DIR']
+    BACKUP_DIR = settings['BACKUP_DIR']
+    EMAIL_SENDER = settings['EMAIL_SENDER']
+    EMAIL_RECEIVER = settings['EMAIL_RECEIVER']
+    EMAIL_SUBJECT = 'Backup Report'
+    EMAIL_SMTP_SERVER = settings['EMAIL_SMTP_SERVER']
+    EMAIL_SMTP_PORT = int(settings['EMAIL_SMTP_PORT'])
+    EMAIL_USERNAME = settings['EMAIL_USERNAME']
+    EMAIL_PASSWORD = settings['EMAIL_PASSWORD']
+    BACKUP_TIME = settings['BACKUP_TIME']
+
+    # Schedule the Backup Script to Run Daily at the Specified Time
+    schedule.every().day.at(BACKUP_TIME).do(backup_files)
+
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
+
 def send_email(subject, body):
     msg = MIMEMultipart() # Create a message using MIMEText
     msg['From'] = EMAIL_SENDER
@@ -90,17 +231,10 @@ def generate_backup_report(files):
         report += f"{file}\n"
     return report
 
-# Scheduling to Run the Backup at Specific Time
-def run_scheduler():
-    schedule.every().day.at("02:00").do(backup_files)  # Backup Files Daily at 2:00 AM
-    
-    while True:  # Condition to keep the script running
-        schedule.run_pending()  # Check if any scheduled tasks are due
-        time.sleep(1)  # Sleep for 1 second before checking again
-
-# Main Function to Run the Scheduler
 if __name__ == '__main__':
     logging.basicConfig(filename='backup.log', level=logging.INFO, format='%(asctime)s:%(levelname)s:%(message)s')
-    # The Line above creates a log file named backup.log in the same directory as the script w/th log file containg 
-    # the time, log level, and message using the format specified
-    run_scheduler()
+    
+    app = QApplication(sys.argv)
+    ex = BackupApp()
+    ex.show()
+    sys.exit(app.exec())
